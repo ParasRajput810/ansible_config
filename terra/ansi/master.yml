@@ -1,0 +1,32 @@
+---
+- hosts: master
+  become: yes
+  become_user: root
+  tasks:
+    - name: Initialize Kubernetes Master
+      shell: sudo kubeadm init --pod-network-cidr=192.168.0.0/16
+
+    - name: Set up admin kubeconfig directory
+      shell: mkdir -p $HOME/.kube
+
+    - name: Copy admin kubeconfig
+      shell: sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+
+    - name: Change kubeconfig ownership
+      shell: sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+    - name: Install network settings
+      shell: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/tigera-operator.yaml
+
+    - name: Install network components
+      shell: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/custom-resources.yaml
+
+    - name: Generate Kubernetes join token
+      command: kubeadm token create --print-join-command
+      register: join_command
+
+    - name: Save join command to file
+      copy:
+        content: "{{ join_command.stdout }}"
+        dest: /root/join_command.sh
+        mode: 0755
