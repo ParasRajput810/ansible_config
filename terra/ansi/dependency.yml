@@ -1,0 +1,50 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: Disable swap
+      shell: sudo swapoff -a
+
+    - name: update
+      shell: sudo apt-get update
+
+    - name: Ensure swap stays disabled
+      mount:
+        name: none
+        path: /proc/swaps
+        fstype: swap
+        state: absent
+
+    - name: Install Docker (docker.io)
+      shell: sudo apt-get install docker.io
+
+    - name: update
+      shell: sudo apt-get update
+
+    - name: Install dependencies
+      shell: sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+
+    - name: make keyring file
+      shell: sudo mkdir -p -m 755 /etc/apt/keyrings
+
+    - name: update
+      shell: sudo apt-get update
+
+    - name: Add Kubernetes GPG key
+      shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository
+      shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+    - name: update
+      shell: sudo apt-get update
+
+    - name: Install kubeadm, kubelet, and kubectl
+      shell: sudo apt-get install -y kubelet kubeadm kubectl
+
+    - name: Hold Kubernetes packages at current version
+      shell: sudo apt-mark hold kubelet kubeadm kubectl
+
+    - name: Hold Kubernetes packages at current version
+      shell: sudo systemctl enable --now kubelet
